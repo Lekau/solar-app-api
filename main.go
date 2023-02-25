@@ -5,14 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func helloWorld(c *gin.Context) {
+func ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Hello World",
+		"message": "Yes the server is running",
 	})
 }
 
 func main() {
 	route := gin.Default()
-	route.GET("/", helloWorld)
+	route.GET("/", ping)
 	route.Run("localhost:5001")
 }
