@@ -43,7 +43,6 @@ func createDummyDB() error {
 	return nil
 }
 
-
 func ping(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{
 		"message": "Yes the server is running",
@@ -55,7 +54,7 @@ func getInformation(c *gin.Context) {
 	userID := c.Param("id")
 
 	// Open the SQLite database file
-	db, err := sql.Open("sqlite3", "./mydatabase.db")
+	db, err := sql.Open("sqlite3", "./dummyData.db")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to open database",
@@ -101,11 +100,68 @@ func getInformation(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func getAllData(c *gin.Context) {
+	// Open the database file
+	db, err := sql.Open("sqlite3", "dummyData.db")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to open database",
+		})
+		return
+	}
+	defer db.Close()
+
+	// Query the database for all the data
+	rows, err := db.Query(`SELECT id, name, battery_percentage, battery_health, location, hours_on_battery, on_battery_power FROM users`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to query database",
+		})
+		return
+	}
+	defer rows.Close()
+
+	// Loop through the rows and store the data in a slice of structs
+	var data []struct {
+		ID                int     `json:"id"`
+		Name              string  `json:"name"`
+		BatteryPercentage float64 `json:"battery_percentage"`
+		BatteryHealth     string  `json:"battery_health"`
+		Location          string  `json:"location"`
+		HoursOnBattery    int     `json:"hours_on_battery"`
+		OnBatteryPower    bool    `json:"on_battery_power"`
+	}
+	for rows.Next() {
+		var d struct {
+			ID                int     `json:"id"`
+			Name              string  `json:"name"`
+			BatteryPercentage float64 `json:"battery_percentage"`
+			BatteryHealth     string  `json:"battery_health"`
+			Location          string  `json:"location"`
+			HoursOnBattery    int     `json:"hours_on_battery"`
+			OnBatteryPower    bool    `json:"on_battery_power"`
+		}
+		err := rows.Scan(&d.ID, &d.Name, &d.BatteryPercentage, &d.BatteryHealth, &d.Location, &d.HoursOnBattery, &d.OnBatteryPower)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to scan row",
+			})
+			return
+		}
+		data = append(data, d)
+	}
+
+	// Return the data as JSON
+	c.JSON(http.StatusOK, gin.H{
+		"data": data,
+	})
+}
 
 func main() {
 	createDummyDB()
 	route := gin.Default()
 	route.GET("/", ping)
-	route.GET("/getInformation", getInformation)
+	route.GET("/getInformation/:id", getInformation)
+	route.GET("/getAllData", getAllData)
 	route.Run("localhost:5001")
 }
